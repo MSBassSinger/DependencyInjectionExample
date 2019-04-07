@@ -5,6 +5,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="DependencyInjectionExampleTest\**" />
+    <EmbeddedResource Remove="DependencyInjectionExampleTest\**" />
+    <None Remove="DependencyInjectionExampleTest\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
   </ItemGroup>
 
