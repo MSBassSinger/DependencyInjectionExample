@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjectionExample", "DependencyInjectionExample.csproj", "{DF39E4BB-A031-455D-87B8-8C2833C1246D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjectionExampleTest", "..\DependencyInjectionExampleTest\DependencyInjectionExampleTest.csproj", "{DB250179-5106-4C65-A197-0B30FBF1C1FE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjectionExampleTest", "DependencyInjectionExampleTest\DependencyInjectionExampleTest.csproj", "{DB250179-5106-4C65-A197-0B30FBF1C1FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
