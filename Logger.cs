@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace DependencyInjectionExample
 {
@@ -15,7 +19,7 @@ namespace DependencyInjectionExample
         /// </summary>
         private String m_LogFileName = "";
         private Int32 m_DaysToRetainLogs = 0;
-        private LOG_TYPE m_DebugLogOptions = LOG_TYPE.Error & LOG_TYPE.Warning;
+        private LOG_TYPE m_DebugLogOptions = LOG_TYPE.Error | LOG_TYPE.Warning;
         private String m_EmailServer = "";
         private String m_EmailLogonName = "";
         private String m_EmailPassword = "";
@@ -25,6 +29,8 @@ namespace DependencyInjectionExample
         private String m_ReplyToAddress = "";
         private Boolean m_EmailEnabled = false;
         private Boolean m_blnDisposeHasBeenCalled = false;
+        private Boolean m_LogDataSet = false;
+        private Boolean m_LogStarted = false;
         private static readonly Lazy<ILogger> m_objLogger = new Lazy<ILogger>(() => new Logger());
 
 
@@ -46,13 +52,20 @@ namespace DependencyInjectionExample
 
             try
             {
+                if (m_LogDataSet && !m_LogStarted)
+                {
 
+                    retVal = WriteHeaderToLog();
+                    retVal = WriteToLog(LOG_TYPE.Informational, "Initial Log entry", "");
+                    m_LogStarted = retVal;
+                }
 
                 retVal = true;
             }
             catch (Exception exUnhandled)
             {
                 exUnhandled.Data.Add("User", Environment.UserName);
+
                 throw;
             }
 
@@ -69,7 +82,7 @@ namespace DependencyInjectionExample
 
             try
             {
-
+                WriteToLog(LOG_TYPE.Informational, "Last entry in log.", "");
 
                 retVal = true;
             }
@@ -273,7 +286,7 @@ namespace DependencyInjectionExample
                                     String emailLogonName,
                                     String emailPassword,
                                     Int32 smtpPort,
-                                    List<string> sendToAddresses,
+                                    List<String> sendToAddresses,
                                     String fromAddress,
                                     String replyToAddress, 
                                     Boolean emailEnabled)
@@ -313,20 +326,120 @@ namespace DependencyInjectionExample
         /// <param name="daysToRetainLogs"></param>
         /// <param name="debugLogOptions"></param>
         /// <returns></returns>
-        public Boolean SetLogData(string logFileName, int daysToRetainLogs, LOG_TYPE debugLogOptions)
+        public Boolean SetLogData(String logFileName, 
+                                  Int32 daysToRetainLogs, 
+                                  LOG_TYPE debugLogOptions)
         {
 
             Boolean retVal = false;
 
             try
             {
+                m_LogFileName = logFileName;
 
+                m_DaysToRetainLogs = daysToRetainLogs;
 
+                m_DebugLogOptions = debugLogOptions;
+
+                m_LogDataSet = true;
+
+                retVal = true;
             }
             catch (Exception exUnhandled)
             {
                 exUnhandled.Data.Add("m_LogFileName", m_LogFileName);
                 throw;
+            }
+
+            return retVal;
+
+        }
+
+        /// <summary>
+        /// Internal method that performs the log write.
+        /// </summary>
+        /// <param name="logType"></param>
+        /// <param name="mainMessage"></param>
+        /// <param name="secondMessage"></param>
+        /// <returns></returns>
+        private Boolean WriteToLog(LOG_TYPE logType, 
+                                   String mainMessage, 
+                                   String secondMessage)
+        {
+            Boolean retVal = false;
+
+            StackTrace st = new StackTrace(true);
+
+            StackFrame frame = null;
+
+            if (st.FrameCount >= 3)
+            {
+                frame = st.GetFrame(2);
+            }
+            else if (st.FrameCount == 2)
+            {
+                frame = st.GetFrame(1);
+            }
+            else
+            {
+                frame = st.GetFrame(0);
+            }
+
+            MethodBase callingMethod = frame.GetMethod();
+            String callingFilePath = frame.GetFileName();
+            String callingFileName = Path.GetFileName(callingFilePath);
+            Int32 callingFileLineNumber = frame.GetFileLineNumber();
+
+            using (StreamWriter logfile = File.AppendText(m_LogFileName))
+            {
+                String logDateTime = "";
+
+                if ((m_DebugLogOptions & LOG_TYPE.ShowTimeOnly) == LOG_TYPE.ShowTimeOnly)
+                {
+                    logDateTime = DateTime.Now.ToShortTimeString();
+                }
+                else
+                {
+                    logDateTime = $"{DateTime.Now.ToShortDateString()}T{DateTime.Now.ToShortTimeString()}";
+                }
+
+                logfile.WriteLine($"{logDateTime}\t{logType.ToString()}\t{mainMessage}\t{secondMessage}\t{callingFileName}\t{callingMethod}\t{callingFileLineNumber.ToString()}");
+                logfile.Flush();
+                logfile.Close();
+
+                retVal = true;
+            }
+
+            return retVal;
+
+        }
+
+        /// <summary>
+        /// Creates the header line, the first ine in the log.
+        /// </summary>
+        /// <returns></returns>
+        private Boolean WriteHeaderToLog()
+        {
+            Boolean retVal = false;
+
+            using (StreamWriter logfile = File.AppendText(m_LogFileName))
+            {
+                String logDateTime = "";
+
+                if ((m_DebugLogOptions & LOG_TYPE.ShowTimeOnly) == LOG_TYPE.ShowTimeOnly)
+                {
+                    logDateTime = "Time";
+                }
+                else
+                {
+                    logDateTime = "Date Time";
+                }
+
+                logfile.WriteLine($"{logDateTime}\tLog Type\tMessage\tAddtl Info\tModule\tMethod\tLine No.");
+                logfile.Flush();
+                logfile.Close();
+
+                retVal = true;
             }
 
             return retVal;
@@ -340,13 +453,18 @@ namespace DependencyInjectionExample
         /// <param name="ex"></param>
         /// <param name="detailMessage">Optional addition message beside what is in the Exception</param>
         /// <returns></returns>
-        public Boolean WriteDebugLog(LOG_TYPE debugLogOptions, Exception ex, String detailMessage)
+        public Boolean WriteDebugLog(LOG_TYPE debugLogOptions, 
+                                     Exception ex, 
+                                     String detailMessage)
         {
             Boolean retVal = false;
 
             try
             {
 
+                String mainMessage = CommonLib.GetFullExceptionMessage(ex, true, true);
+
+                retVal = WriteToLog(debugLogOptions, mainMessage, detailMessage);
 
             }
             catch (Exception exUnhandled)
@@ -365,13 +483,15 @@ namespace DependencyInjectionExample
         /// <param name="debugLogOptions"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        public Boolean WriteDebugLog(LOG_TYPE debugLogOptions, String message)
+        public Boolean WriteDebugLog(LOG_TYPE debugLogOptions, 
+                                     String message)
         {
             Boolean retVal = false;
 
             try
             {
 
+                retVal = WriteToLog(debugLogOptions, message, "");
 
             }
             catch (Exception exUnhandled)
@@ -427,6 +547,7 @@ namespace DependencyInjectionExample
 
             catch (Exception exUnhandled)
             {
+                exUnhandled.Data.Add("m_blnDisposeHasBeenCalled", m_blnDisposeHasBeenCalled.ToString());
 
                 throw;
 
@@ -449,7 +570,7 @@ namespace DependencyInjectionExample
         /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-        protected void Dispose(Boolean disposing)
+        public void Dispose(Boolean disposing)
         {
 
             try
@@ -474,6 +595,8 @@ namespace DependencyInjectionExample
 
             catch (Exception exUnhandled)
             {
+
+                exUnhandled.Data.Add("m_blnDisposeHasBeenCalled", m_blnDisposeHasBeenCalled.ToString());
 
                 throw;
 

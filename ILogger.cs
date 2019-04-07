@@ -53,7 +53,9 @@ namespace DependencyInjectionExample
     public interface ILogger : IDisposable
     {
 
-        Boolean SetLogData(String logFileName, Int32 daysToRetainLogs, LOG_TYPE debugLogOptions);
+        Boolean SetLogData(String logFileName, 
+                           Int32 daysToRetainLogs, 
+                           LOG_TYPE debugLogOptions);
 
         String LogFileName { get; }
 
@@ -86,9 +88,12 @@ namespace DependencyInjectionExample
 
         String ReplyToAddress { get; set; }
 
-        Boolean WriteDebugLog(LOG_TYPE debugLogOptions, Exception ex, String detailMessage);
+        Boolean WriteDebugLog(LOG_TYPE debugLogOptions, 
+                              Exception ex, 
+                              String detailMessage);
 
-        Boolean WriteDebugLog(LOG_TYPE debugLogOptions, String message);
+        Boolean WriteDebugLog(LOG_TYPE debugLogOptions, 
+                              String message);
 
         Boolean StartLog();
 
